@@ -1,0 +1,67 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2865
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 // app/Infrastructure/Detran/DetranApiAdapter.php\
+namespace App\\Infrastructure\\Detran;\
+\
+use Illuminate\\Support\\Facades\\Http;\
+use Illuminate\\Support\\Facades\\Log;\
+use App\\Domain\\Vehicle\\Contracts\\VehicleLookupServiceInterface;\
+use App\\Domain\\Vehicle\\DataTransferObjects\\VehicleDto;\
+\
+class DetranApiAdapter implements VehicleLookupServiceInterface\
+\{\
+    private string $baseUrl;\
+    private string $token;\
+\
+    public function __construct()\
+    \{\
+        // Configura\'e7\'f5es v\'eam do .env (boas pr\'e1ticas)\
+        $this->baseUrl = config('services.detran.url');\
+        $this->token = config('services.detran.token');\
+    \}\
+\
+    public function findByPlate(string $plate): ?VehicleDto\
+    \{\
+        try \{\
+            // Simulando uma chamada HTTP real\
+            $response = Http::withToken($this->token)\
+                ->timeout(5) // Importante: n\'e3o travar a cancela por muito tempo\
+                ->get("\{$this->baseUrl\}/veiculos/\{$plate\}");\
+\
+            if ($response->failed()) \{\
+                Log::warning("Falha ao consultar Detran para placa \{$plate\}: " . $response->body());\
+                return null;\
+            \}\
+\
+            $data = $response->json();\
+\
+            // O Adapter "traduz" o formato do Detran para o formato do nosso sistema\
+            return new VehicleDto(\
+                plate: $data['placa_veiculo'], // Supondo que o Detran retorne assim\
+                brand: $data['marca_nome'],\
+                model: $data['modelo_desc'],\
+                color: $data['cor_predominante'],\
+                category: $this->normalizeType($data['tipo_veiculo'])\
+            );\
+\
+        \} catch (\\Exception $e) \{\
+            Log::error("Erro cr\'edtico no Adapter Detran: " . $e->getMessage());\
+            return null;\
+        \}\
+    \}\
+\
+    private function normalizeType(string $externalType): string\
+    \{\
+        // Mapa de tradu\'e7\'e3o: Detran -> Nosso Sistema\
+        return match (strtoupper($externalType)) \{\
+            'MOTOCICLETA', 'CICLOMOTOR' => 'MOTO',\
+            'CAMINHAO', 'ONIBUS' => 'HEAVY',\
+            default => 'STANDARD',\
+        \};\
+    \}\
+\}}

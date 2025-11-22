@@ -1,0 +1,120 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2865
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\froman\fcharset0 Times-Roman;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 version: "3.7"\
+services:\
+  # 1. Aplica\'e7\'e3o (Laravel)\
+  app:\
+    build:\
+      context: .\
+      dockerfile: Dockerfile\
+      args:\
+        user: laravel\
+        uid: 1000\
+    image: parking-app\
+    container_name: parking-app\
+    restart: unless-stopped\
+    working_dir: /var/www\
+    volumes:\
+      - ./:/var/www\
+    networks:\
+      - parking-network\
+    \expnd0\expndtw0\kerning0
+depends_on: \
+        - db \
+        - redis\kerning1\expnd0\expndtw0 \
+\
+  # 2. Servidor Web (Nginx)\
+  nginx:\
+    image: nginx:alpine\
+    container_name: parking-nginx\
+    restart: unless-stopped\
+    ports:\
+      - "8000:80" # Acessar\'e1 via localhost:8000\
+    volumes:\
+      - ./:/var/www\
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d # Configura\'e7\'e3o customizada\
+    networks:\
+      - parking-network\
+    depends_on:\
+      - app # S\'f3 sobe depois que o app subir\
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 \outl0\strokewidth0 \strokec2 # SERVI\'c7O DE T\'daNEL (NGROK) \
+    ngrok: \
+        image: ngrok/ngrok:latest \
+        container_name: parking-ngrok \
+        restart: unless-stopped \
+        # O comando diz: "Crie um t\'fanel HTTP apontando para o servi\'e7o 'nginx' na porta 80" \
+        command: "http --domain=$\{NGROK_DOMAIN\} nginx:80" \
+        environment: \
+             NGROK_AUTHTOKEN: $\{NGROK_AUTHTOKEN\} \
+         ports: \
+             - "4040:4040" # Interface visual do Ngrok (para inspecionar requisi\'e7\'f5es) \
+         networks: - parking-network \
+         depends_on: - nginx # S\'f3 sobe se o servidor web estiver de p\'e9\kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+  # 3. Banco de Dados (MySQL 8.0)\
+  db:\
+    image: mysql:8.0\
+    container_name: parking-db\
+    restart: unless-stopped\
+    environment:\
+      MYSQL_DATABASE: $\{DB_DATABASE\}\
+      MYSQL_ROOT_PASSWORD: $\{DB_PASSWORD\}\
+      MYSQL_PASSWORD: $\{DB_PASSWORD\}\
+      MYSQL_USER: $\{DB_USERNAME\}\
+      SERVICE_TAGS: dev\
+      SERVICE_NAME: mysql\
+    volumes:\
+      - ./docker/mysql/data:/var/lib/mysql # Persist\'eancia dos dados\
+    networks:\
+      - parking-network\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+# 4. Redis \
+redis: \
+    image: redis:alpine \
+    container_name: parking-redis \
+    restart: unless-stopped \
+    command: redis-server --appendonly yes # Garante persist\'eancia b\'e1sica \
+    volumes: - ./docker/redis/data:/data # Persiste a fila mesmo se reiniciar \
+    networks: - parking-network\
+
+\f1 \
+\
+  
+\f0 # 5. Worker de Filas (Processamento em Background)\
+  queue:\
+    build:\
+      context: .\
+      dockerfile: Dockerfile\
+      args:\
+        user: laravel\
+        uid: 1000\
+    image: parking-queue\
+    container_name: parking-queue\
+    restart: unless-stopped\
+    working_dir: /var/www\
+    # Sobrescreve o comando padr\'e3o para rodar o worker\
+    command: php artisan queue:work --verbose --tries=3 --timeout=90\
+    volumes:\
+      - ./:/var/www\
+    networks:\
+      - parking-network\
+    depends_on:\
+      - db\
+      - redis \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+networks:\
+  parking-network:\
+    driver: bridge}

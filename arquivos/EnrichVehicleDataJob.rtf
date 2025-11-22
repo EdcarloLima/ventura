@@ -1,0 +1,64 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2865
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 namespace App\\Jobs;\
+\
+use App\\Domain\\Vehicle\\Contracts\\VehicleLookupServiceInterface;\
+use App\\Models\\Vehicle;\
+use Illuminate\\Bus\\Queueable;\
+use Illuminate\\Contracts\\Queue\\ShouldQueue;\
+use Illuminate\\Foundation\\Bus\\Dispatchable;\
+use Illuminate\\Queue\\InteractsWithQueue;\
+use Illuminate\\Queue\\SerializesModels;\
+use Illuminate\\Support\\Facades\\Log;\
+\
+class EnrichVehicleDataJob implements ShouldQueue\
+\{\
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;\
+\
+    /**\
+     * Configura\'e7\'f5es de Resili\'eancia (Dica de Ouro para Arquiteto)\
+     * Se o Detran falhar, o Laravel tentar\'e1 de novo automaticamente.\
+     */\
+    public int $tries = 3; // Tenta 3 vezes\
+    public int $backoff = 10; // Espera 10 segundos entre tentativas\
+\
+    /**\
+     * Recebemos apenas o Ve\'edculo rec\'e9m-criado (que s\'f3 tem a placa).\
+     */\
+    public function __construct(\
+        public Vehicle $vehicle\
+    ) \{\}\
+\
+    /**\
+     * A m\'e1gica acontece aqui. Injetamos a interface, n\'e3o a implementa\'e7\'e3o concreta.\
+     */\
+    public function handle(VehicleLookupServiceInterface $detranService): void\
+    \{\
+        Log::info("Iniciando enriquecimento de dados para placa: \{$this->vehicle->plate\}");\
+\
+        // 1. Consulta o servi\'e7o externo (Detran)\
+        $vehicleDto = $detranService->findByPlate($this->vehicle->plate);\
+\
+        if (!$vehicleDto) \{\
+            Log::warning("Dados n\'e3o encontrados no Detran para: \{$this->vehicle->plate\}. Abortando job.");\
+            // Poder\'edamos lan\'e7ar uma exception para tentar de novo, \
+            // mas se retornou null \'e9 prov\'e1vel que a placa n\'e3o exista ou a API tratou o erro.\
+            return;\
+        \}\
+\
+        // 2. Atualiza o registro no banco local\
+        $this->vehicle->update([\
+            'brand' => $vehicleDto->brand,\
+            'model' => $vehicleDto->model,\
+            'color' => $vehicleDto->color,\
+            'type'  => $vehicleDto->category, // Atualiza de 'STANDARD' para o real (ex: MOTO)\
+        ]);\
+\
+        Log::info("Ve\'edculo \{$this->vehicle->plate\} atualizado com sucesso.");\
+    \}\
+\}}

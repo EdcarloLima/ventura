@@ -1,0 +1,38 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2865
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 // app/Domain/Pricing/Strategies/FixedHourlyStrategy.php\
+namespace App\\Domain\\Pricing\\Strategies;\
+\
+use App\\Domain\\Pricing\\Contracts\\PricingStrategy;\
+use Carbon\\Carbon;\
+\
+class FixedHourlyStrategy implements PricingStrategy\
+\{\
+    // Definimos como constante para facilitar manuten\'e7\'e3o ou inje\'e7\'e3o via config depois\
+    private const HOURLY_RATE = 15.00;\
+\
+    public function calculate(Carbon $entryTime, Carbon $exitTime, array $context = []): float\
+    \{\
+        // 1. Calcula a diferen\'e7a total em minutos\
+        // O par\'e2metro true garante que o valor seja absoluto (sempre positivo)\
+        $totalMinutes = $entryTime->diffInMinutes($exitTime, true);\
+\
+        // Regra de neg\'f3cio: Se entrou e saiu no mesmo minuto (0 min), cobramos 1 hora ou damos isen\'e7\'e3o?\
+        // Pela sua regra "passar 1 minuto cobra completo", assumimos toler\'e2ncia zero.\
+        if ($totalMinutes <= 0) \{\
+            return self::HOURLY_RATE; \
+        \}\
+\
+        // 2. Converte para horas arredondando para cima\
+        // Ex: 61 min / 60 = 1.016 -> ceil vira 2.0\
+        $hoursToCharge = ceil($totalMinutes / 60);\
+\
+        // 3. Retorna o valor\
+        return $hoursToCharge * self::HOURLY_RATE;\
+    \}\
+\}}

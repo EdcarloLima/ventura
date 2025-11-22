@@ -1,0 +1,100 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2865
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 // app/Infrastructure/Payment/Pix/StaticPixGenerator.php\
+namespace App\\Infrastructure\\Payment\\Pix;\
+\
+use App\\Domain\\Payment\\Contracts\\PaymentGatewayInterface;\
+use App\\Domain\\Payment\\DataTransferObjects\\PaymentIntentDto;\
+use Illuminate\\Support\\Str;\
+use SimpleSoftwareIO\\QrCode\\Facades\\QrCode;\
+\
+class StaticPixGenerator implements PaymentGatewayInterface\
+\{\
+    private string $pixKey;\
+    private string $merchantName;\
+    private string $merchantCity;\
+\
+    public function __construct()\
+    \{\
+        // Valores fixos da V1 vindos do .env\
+        $this->pixKey = config('services.pix.key', 'estacionamento.ventura@gmail.com');\
+        $this->merchantName = config('services.pix.name', 'Estacionamento Ventura');\
+        $this->merchantCity = config('services.pix.city', 'Feira de Santana');\
+    \}\
+\
+    public function generatePix(float $amount, string $description): PaymentIntentDto\
+    \{\
+        $transactionId = (string) Str::uuid();\
+        \
+        // 1. Monta o Payload EMV (String Copia e Cola)\
+        $payload = $this->buildEmvPayload($amount, $transactionId);\
+\
+        // 2. Gera a Imagem (Formato SVG ou PNG em Base64 para ser leve)\
+        $image = QrCode::format('svg')->size(300)->generate($payload);\
+        \
+        // Convertendo SVG simples para string base64 apenas para transporte f\'e1cil, \
+        // ou retornando a string SVG pura dependendo do seu frontend.\
+        $imageBase64 = base64_encode($image);\
+\
+        return new PaymentIntentDto(\
+            payload: $payload,\
+            imageBase64: $imageBase64,\
+            transactionId: $transactionId\
+        );\
+    \}\
+\
+    /**\
+     * L\'f3gica "Hardcore" do padr\'e3o EMVCo do Banco Central.\
+     * Isso demonstra dom\'ednio profundo de protocolos.\
+     */\
+    private function buildEmvPayload(float $amount, string $txId): string\
+    \{\
+        $amountStr = number_format($amount, 2, '.', '');\
+        \
+        $p  = "000201"; // Payload Format Indicator + Merchant Account Info\
+        $p .= "26" . (strlen($this->pixKey) + 22); // Tamanho do campo 26\
+        $p .= "0014BR.GOV.BCB.PIX";\
+        $p .= "01" . sprintf("%02d", strlen($this->pixKey)) . $this->pixKey;\
+        \
+        $p .= "52040000"; // Merchant Category Code\
+        $p .= "5303986";  // Transaction Currency (BRL)\
+        $p .= "54" . sprintf("%02d", strlen($amountStr)) . $amountStr;\
+        \
+        $p .= "5802BR";   // Country Code\
+        $p .= "59" . sprintf("%02d", strlen($this->merchantName)) . $this->merchantName;\
+        $p .= "60" . sprintf("%02d", strlen($this->merchantCity)) . $this->merchantCity;\
+        \
+        $p .= "62" . (strlen($txId) + 4); // Additional Data Field Template\
+        $p .= "05" . sprintf("%02d", strlen($txId)) . $txId;\
+        \
+        $p .= "6304"; // CRC16 placeholder\
+\
+        // Calcula o CRC16 CCITT-FALSE\
+        $crc = $this->calculateCRC16($p);\
+        \
+        return $p . $crc;\
+    \}\
+\
+    private function calculateCRC16($payload): string\
+    \{\
+        // Algoritmo padr\'e3o do Bacen\
+        $polynomial = 0x1021;\
+        $resultado = 0xFFFF;\
+\
+        if (($length = strlen($payload)) > 0) \{\
+            for ($offset = 0; $offset < $length; $offset++) \{\
+                $resultado ^= (ord($payload[$offset]) << 8);\
+                for ($bitwise = 0; $bitwise < 8; $bitwise++) \{\
+                    if (($resultado <<= 1) & 0x10000) $resultado ^= $polynomial;\
+                    $resultado &= 0xFFFF;\
+                \}\
+            \}\
+        \}\
+        return strtoupper(dechex($resultado));\
+    \}\
+\}}
