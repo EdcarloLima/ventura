@@ -1,0 +1,104 @@
+services:
+  # 1. Aplicação (Laravel)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        user: laravel
+        uid: 1000
+    image: parking-app
+    container_name: parking-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - parking-network
+    depends_on:
+      - db
+      - redis
+
+  # 2. Servidor Web (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: parking-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80" # Acessará via localhost:8080
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d # Configuração customizada
+    networks:
+      - parking-network
+    depends_on:
+      - app # Só sobe depois que o app subir
+
+  # SERVIÇO DE TÚNEL (NGROK)
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: parking-ngrok
+    restart: unless-stopped
+    # O comando diz: "Crie um túnel HTTP apontando para o serviço 'nginx' na porta 80"
+    command: "http --domain=${NGROK_DOMAIN} nginx:80"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040" # Interface visual do Ngrok (para inspecionar requisições)
+    networks:
+      - parking-network
+    depends_on:
+      - nginx # Só sobe se o servidor web estiver de pé
+
+  # 3. Banco de Dados (MySQL 8.0)
+  db:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: parking-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql # Persistência dos dados
+    networks:
+      - parking-network
+
+  # 4. Redis
+  redis:
+    image: redis:alpine
+    container_name: parking-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes # Garante persistência básica
+    volumes:
+      - ./docker/redis/data:/data # Persiste a fila mesmo se reiniciar
+    networks:
+      - parking-network
+
+  # 5. Worker de Filas (Processamento em Background)
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        user: laravel
+        uid: 1000
+    image: parking-queue
+    container_name: parking-queue
+    restart: unless-stopped
+    working_dir: /var/www
+    # Sobrescreve o comando padrão para rodar o worker
+    command: php artisan queue:work --verbose --tries=3 --timeout=90
+    volumes:
+      - ./:/var/www
+    networks:
+      - parking-network
+    depends_on:
+      - db
+      - redis
+
+networks:
+  parking-network:
+    driver: bridge
