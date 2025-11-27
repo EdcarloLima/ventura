@@ -3,6 +3,7 @@
 /public/storage
 /storage/*.key
 /vendor
+/vendor/_laravel_ide/
 .env
 .env.backup
 .phpunit.result.cache
