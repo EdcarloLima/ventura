@@ -34,4 +34,12 @@ return [
         'secret' => env('SPARKPOST_SECRET'),
     ],
 
+    'detran' => [
+        'url' => env('DETRAN_API_URL', 'https://api.detran.mock/v1'),
+        'token' => env('DETRAN_API_TOKEN', 'demo-token'),
+        'timeout' => env('DETRAN_API_TIMEOUT', 5),
+        'retry_times' => env('DETRAN_API_RETRY_TIMES', 2),
+        'retry_sleep' => env('DETRAN_API_RETRY_SLEEP', 100),
+    ],
+
 ];
