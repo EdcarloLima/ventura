@@ -29,10 +29,19 @@ class DetranApiAdapter implements VehicleLookupServiceInterface
         try {
             Log::info("Consultando Detran para a placa: {$plate}");
 
-            $response = Http::withToken($this->token)
-                ->timeout($this->timeout)
-                ->retry($this->retryTimes, $this->retrySleep)
-                ->get("{$this->baseUrl}/veiculos/{$plate}");
+            // BrasilAPI não usa token de autenticação
+            $httpClient = Http::timeout($this->timeout)
+                ->retry($this->retryTimes, $this->retrySleep);
+
+            // Adiciona token apenas se configurado (algumas APIs precisam, BrasilAPI não)
+            if (!empty($this->token) && $this->token !== 'demo-token' && $this->token !== 'seutokenaqui') {
+                $httpClient = $httpClient->withToken($this->token);
+            }
+
+            // BrasilAPI usa formato: /api/placa/v1/{placa}
+            // Outras APIs podem usar: /veiculos/{placa}
+            $url = $this->buildUrl($plate);
+            $response = $httpClient->get($url);
 
             if ($response->failed()) {
                 Log::warning("Detran API falhou ou não encontrou [{$plate}]. Status: " . $response->status());
@@ -46,7 +55,7 @@ class DetranApiAdapter implements VehicleLookupServiceInterface
                 brand: $data['marca'] ?? 'Desconhecida',
                 model: $data['modelo'] ?? 'Modelo Desconhecido',
                 color: $data['cor'] ?? 'Indefinida',
-                category: $this->normalizeType($data['tipo_veiculo'] ?? 'CARRO')
+                category: $this->normalizeType($data['tipo_veiculo'] ?? $data['tipo'] ?? 'CARRO')
             );
 
         } catch (\Throwable $e) {
@@ -59,6 +68,22 @@ class DetranApiAdapter implements VehicleLookupServiceInterface
 
             return null;
         }
+    }
+
+    /**
+     * Constrói a URL correta baseado na API configurada.
+     * BrasilAPI: https://brasilapi.com.br/api/placa/v1/{placa}
+     * Outras: {baseUrl}/veiculos/{placa}
+     */
+    private function buildUrl(string $plate): string
+    {
+        // Se já termina com /v1, é BrasilAPI
+        if (str_ends_with($this->baseUrl, '/v1')) {
+            return "{$this->baseUrl}/{$plate}";
+        }
+
+        // Caso contrário, usa o padrão genérico
+        return "{$this->baseUrl}/veiculos/{$plate}";
     }
 
     /**

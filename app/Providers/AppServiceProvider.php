@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
-use App\Domain\Vehicle\Contracts\VehicleLookupServiceInterface;
-use App\Infrastructure\Detran\DetranApiAdapter;
 use Illuminate\Support\ServiceProvider;
+use App\Infrastructure\Detran\DetranApiAdapter;
+use App\Domain\Pricing\Strategies\FixedHourlyStrategy;
+use App\Infrastructure\MercadoPago\MercadoPagoGateway;
+use App\Domain\Payment\Contracts\PaymentGatewayInterface;
+use App\Domain\Pricing\Contracts\PricingStrategyInterface;
+use App\Domain\Vehicle\Contracts\VehicleLookupServiceInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,10 +19,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // Bind da interface VehicleLookupServiceInterface para DetranApiAdapter
         $this->app->bind(
             VehicleLookupServiceInterface::class,
             DetranApiAdapter::class
+        );
+
+        $this->app->bind(
+            PricingStrategyInterface::class, 
+            FixedHourlyStrategy::class
+        );
+
+        $this->app->bind(
+            PaymentGatewayInterface::class,
+            MercadoPagoGateway::class
         );
     }
 

@@ -42,4 +42,12 @@ return [
         'retry_sleep' => env('DETRAN_API_RETRY_SLEEP', 100),
     ],
 
+    'mercadopago' => [
+        'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
+        'public_key' => env('MERCADOPAGO_PUBLIC_KEY'),
+        'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
+        'timeout' => env('MERCADOPAGO_TIMEOUT', 30),
+        'sandbox' => env('MERCADOPAGO_SANDBOX', true),
+    ],
+
 ];
