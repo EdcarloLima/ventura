@@ -9,6 +9,7 @@ use App\Infrastructure\MercadoPago\MercadoPagoGateway;
 use App\Domain\Payment\Contracts\PaymentGatewayInterface;
 use App\Domain\Pricing\Contracts\PricingStrategyInterface;
 use App\Domain\Vehicle\Contracts\VehicleLookupServiceInterface;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,6 +43,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        if ($this->app->environment('production') || env('NGROK_DOMAIN')) { 
+            URL::forceScheme('https');
+        }
     }
 }

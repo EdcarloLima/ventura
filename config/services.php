@@ -50,4 +50,10 @@ return [
         'sandbox' => env('MERCADOPAGO_SANDBOX', true),
     ],
 
+    'barrier' => [
+        'url' => env('BARRIER_API_URL', 'mock://barrier'),
+        'api_key' => env('BARRIER_API_KEY', ''),
+        'timeout' => env('BARRIER_API_TIMEOUT', 10),
+    ],
+
 ];
