@@ -1,0 +1,148 @@
+{
+  "info": {
+    "_postman_id": "parking-mvp0-001",
+    "name": "Parking Ventura MVP 0",
+    "description": "Requisições para teste do MVP 0 do sistema de estacionamento",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "_postman_id": "req-001",
+      "name": "1. Registrar Entrada - ABC1234",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"plate\": \"ABC1234\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/vehicles/entry",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "vehicles", "entry"]
+        },
+        "description": "Registra a entrada de um veículo e aloca uma vaga automaticamente"
+      }
+    },
+    {
+      "_postman_id": "req-002",
+      "name": "2. Registrar Entrada - XYZ9876",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"plate\": \"XYZ9876\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/vehicles/entry",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "vehicles", "entry"]
+        }
+      }
+    },
+    {
+      "_postman_id": "req-003",
+      "name": "3. Estatísticas do Sistema",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/stats",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "stats"]
+        },
+        "description": "Retorna estatísticas em tempo real do sistema"
+      }
+    },
+    {
+      "_postman_id": "req-004",
+      "name": "4. Listar Vagas Disponíveis",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/spots/available",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "spots", "available"]
+        },
+        "description": "Lista todas as vagas disponíveis ordenadas por código"
+      }
+    },
+    {
+      "_postman_id": "req-005",
+      "name": "5. Listar Tickets Ativos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/tickets/active",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tickets", "active"]
+        },
+        "description": "Lista todos os tickets com status Aberto, Pagamento Pendente ou Pago"
+      }
+    },
+    {
+      "_postman_id": "req-006",
+      "name": "6. Consultar Ticket Específico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/tickets/a076f0cc-89ea-4db4-bb3e-e4d1c48e540c",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "tickets", "a076f0cc-89ea-4db4-bb3e-e4d1c48e540c"]
+        },
+        "description": "Consulta detalhes de um ticket específico (substitua o ID)"
+      }
+    },
+    {
+      "_postman_id": "req-007",
+      "name": "7. Teste Placa Inválida (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"plate\": \"ABC123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/vehicles/entry",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "vehicles", "entry"]
+        },
+        "description": "Teste de validação - deve retornar erro 422"
+      }
+    }
+  ]
+}
