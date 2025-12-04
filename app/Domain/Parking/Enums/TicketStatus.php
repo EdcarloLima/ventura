@@ -10,9 +10,6 @@ class TicketStatus
     public const CONCLUIDO = 'Concluído';
     public const CANCELADO = 'Cancelado';
 
-    /**
-     * Retorna todos os status disponíveis.
-     */
     public static function all(): array
     {
         return [
@@ -24,9 +21,6 @@ class TicketStatus
         ];
     }
 
-    /**
-     * Verifica se um status é válido.
-     */
     public static function isValid(string $status): bool
     {
         return in_array($status, self::all(), true);

@@ -21,7 +21,7 @@ Route::post('/vehicles/entry', function (Request $request, RegisterEntryAction $
             'gate_id' => 'nullable|string',
         ]);
 
-        $ticket = $action->execute(
+        $result = $action->execute(
             strtoupper($validated['plate']),
             $validated['gate_id'] ?? 'entrada-1'
         );
@@ -31,17 +31,17 @@ Route::post('/vehicles/entry', function (Request $request, RegisterEntryAction $
             'message' => 'Veículo registrado com sucesso',
             'data' => [
                 'ticket' => [
-                    'id' => $ticket->id,
-                    'entry_at' => $ticket->entry_at->format('Y-m-d H:i:s'),
-                    'status' => $ticket->status,
+                    'id' => $result->ticket->id,
+                    'entry_at' => $result->ticket->entryAt->format('Y-m-d H:i:s'),
+                    'status' => $result->ticket->status,
                 ],
                 'vehicle' => [
-                    'plate' => $ticket->vehicle->plate,
-                    'type' => $ticket->vehicle->type,
+                    'plate' => $result->vehicle->plate,
+                    'type' => $result->vehicle->type,
                 ],
                 'spot' => [
-                    'code' => $ticket->parkingSpot->code,
-                    'status' => $ticket->parkingSpot->status,
+                    'code' => $result->spot->code,
+                    'status' => $result->spot->status,
                 ],
             ],
         ], 201);

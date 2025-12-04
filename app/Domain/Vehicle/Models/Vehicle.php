@@ -20,15 +20,17 @@ class Vehicle extends Model
         'color',
     ];
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\VehicleFactory::new();
+    }
+
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
-    /**
-     * Relacionamento: Um veículo pode ter vários tickets
-     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);

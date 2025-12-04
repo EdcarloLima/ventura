@@ -27,6 +27,11 @@ class Ticket extends Model
         'total_amount',
     ];
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\TicketFactory::new();
+    }
+
     protected $casts = [
         'entry_at' => 'datetime',
         'paid_at' => 'datetime',

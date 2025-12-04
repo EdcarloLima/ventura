@@ -3,7 +3,8 @@
 namespace App\Jobs;
 
 use App\Domain\Vehicle\Contracts\VehicleLookupServiceInterface;
-use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Contracts\VehicleRepositoryInterface;
+use App\Domain\Vehicle\DTOs\UpdateVehicleDTO;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,53 +19,54 @@ class FetchVehicleDetailsJob implements ShouldQueue
     use Queueable; 
     use SerializesModels;
 
-    /**
-     * Número de tentativas em caso de falha.
-     * Se o Detran cair, o Laravel tenta de novo 3 vezes.
-     */
     public int $tries = 3;
 
-    /**
-     * Tempo de espera (em segundos) entre as tentativas.
-     */
     public int $backoff = 10;
 
-    /**
-     * O Job recebe o veículo que precisa ser atualizado.
-     */
     public function __construct(
-        public readonly Vehicle $vehicle
+        public readonly int $vehicleId
     ) {}
 
-    /**
-     * Injeta automaticamente a implementação do Detran (DetranApiAdapter).
-     */
-    public function handle(VehicleLookupServiceInterface $detranService): void
+    public function handle(
+        VehicleLookupServiceInterface $detranService,
+        VehicleRepositoryInterface $vehicleRepository
+    ): void
     {
+        $vehicle = $vehicleRepository->findById($this->vehicleId);
+
+        if (!$vehicle) {
+            Log::warning("Veículo não encontrado.", [
+                'vehicle_id' => $this->vehicleId
+            ]);
+            return;
+        }
+
         Log::info("Buscando detalhes para a placa.", [
-            'placa' => $this->vehicle->plate
+            'placa' => $vehicle->plate
         ]);
 
         try {
-            $vehicleDto = $detranService->findByPlate($this->vehicle->plate);
+            $vehicleDto = $detranService->findByPlate($vehicle->plate);
 
             if (!$vehicleDto) {
                 Log::warning("Veículo não encontrado no Detran ou erro na API externa.", [
-                    'placa' => $this->vehicle->plate
+                    'placa' => $vehicle->plate
                 ]);
                 
                 return;
             }
 
-            $this->vehicle->update([
-                'brand' => $vehicleDto->brand,
-                'model' => $vehicleDto->model,
-                'color' => $vehicleDto->color,
-                'type'  => $vehicleDto->category,
-            ]);
+            $updateDTO = new UpdateVehicleDTO(
+                type: $vehicleDto->category,
+                brand: $vehicleDto->brand,
+                model: $vehicleDto->model,
+                color: $vehicleDto->color
+            );
+            
+            $vehicleRepository->update($vehicle->id, $updateDTO);
 
             Log::info("Veículo atualizado!", [
-                'placa' => $this->vehicle->plate,
+                'placa' => $vehicle->plate,
                 'brand' => $vehicleDto->brand,
                 'model' => $vehicleDto->model,
                 'color' => $vehicleDto->color,
@@ -73,7 +75,7 @@ class FetchVehicleDetailsJob implements ShouldQueue
 
         } catch (\Throwable $e) {
             Log::critical("Falha ao processar placa.", [
-                'placa' => $this->vehicle->plate,
+                'placa' => $vehicle->plate,
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
             ]);
