@@ -18,6 +18,14 @@ services:
     depends_on:
       - db
       - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'      # 50% de 1 vCPU (t3.micro tem 2 vCPUs)
+          memory: 256M     # ~25% da RAM (1GB total)
+        reservations:
+          cpus: '0.25'     # Mínimo garantido
+          memory: 128M     # Mínimo garantido
 
   # 2. Servidor Web (Nginx)
   nginx:
@@ -33,6 +41,14 @@ services:
       - parking-network
     depends_on:
       - app # Só sobe depois que o app subir
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'     # Nginx é leve
+          memory: 64M      # ~6% da RAM
+        reservations:
+          cpus: '0.1'
+          memory: 32M
 
   # SERVIÇO DE TÚNEL (NGROK)
   ngrok:
@@ -49,6 +65,14 @@ services:
       - parking-network
     depends_on:
       - nginx # Só sobe se o servidor web estiver de pé
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
 
   # 3. Banco de Dados (MySQL 8.0)
   db:
@@ -67,6 +91,14 @@ services:
       - ./docker/mysql/data:/var/lib/mysql # Persistência dos dados
     networks:
       - parking-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'      # MySQL precisa mais CPU
+          memory: 384M     # ~38% da RAM (maior consumidor)
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   # 4. Redis
   redis:
@@ -78,6 +110,14 @@ services:
       - ./docker/redis/data:/data # Persiste a fila mesmo se reiniciar
     networks:
       - parking-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M     # ~12% da RAM
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
   # 5. Worker de Filas (Processamento em Background)
   queue:
@@ -100,6 +140,14 @@ services:
     depends_on:
       - db
       - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M     # ~12% da RAM
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
 networks:
   parking-network:
