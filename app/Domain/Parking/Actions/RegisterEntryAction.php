@@ -30,7 +30,7 @@ class RegisterEntryAction
         return DB::transaction(function () use ($plate, $gateId) {
             
             $vehicle = $this->vehicleRepository->findByPlate($plate);
-            
+
             if ($vehicle) {
                 $activeTicket = $this->ticketRepository->findActiveTicketForVehicle($vehicle->id);
 

@@ -12,6 +12,16 @@ use App\Domain\Parking\Models\ParkingSpot;
 */
 
 // ============================================
+// HEALTH CHECK
+// ============================================
+Route::get('/health', function () {
+    return response()->json([
+        'health' => 'on',
+        'version' => 'v1',
+    ]);
+});
+
+// ============================================
 // ENTRADA DE VEÍCULOS (MVP 0)
 // ============================================
 Route::post('/vehicles/entry', function (Request $request, RegisterEntryAction $action) {

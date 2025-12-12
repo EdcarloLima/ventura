@@ -20,7 +20,6 @@ class RegisterEntryIntegrationTest extends TestCase
     {
         parent::setUp();
         
-        // Criar vagas para testes
         ParkingSpot::factory()->count(10)->create([
             'status' => ParkingSpotStatus::DISPONIVEL
         ]);
@@ -49,30 +48,25 @@ class RegisterEntryIntegrationTest extends TestCase
                 ],
             ]);
 
-        // Verificar se veículo foi criado no banco
         $this->assertDatabaseHas('vehicles', [
             'plate' => 'ABC1234',
             'type' => 'Carro',
         ]);
 
-        // Verificar se ticket foi criado
         $this->assertDatabaseHas('tickets', [
             'status' => TicketStatus::ABERTO,
         ]);
 
-        // Verificar se vaga foi ocupada
         $this->assertDatabaseHas('parking_spots', [
             'status' => ParkingSpotStatus::OCUPADO,
         ]);
 
-        // Verificar se job foi disparado
         Queue::assertPushed(FetchVehicleDetailsJob::class);
     }
 
     /** @test */
     public function it_prevents_duplicate_entry_for_same_vehicle()
     {
-        // Criar veículo e ticket ativo
         $vehicle = Vehicle::factory()->create(['plate' => 'XYZ9999']);
         $spot = ParkingSpot::first();
         
@@ -84,7 +78,6 @@ class RegisterEntryIntegrationTest extends TestCase
 
         $spot->update(['status' => ParkingSpotStatus::OCUPADO]);
 
-        // Tentar registrar novamente
         $response = $this->postJson('/api/vehicles/entry', [
             'plate' => 'XYZ9999',
             'gate_id' => 'entrada-1',
@@ -102,7 +95,6 @@ class RegisterEntryIntegrationTest extends TestCase
     {
         Queue::fake();
 
-        // Criar veículo com ticket fechado
         $vehicle = Vehicle::factory()->create(['plate' => 'DEF5678']);
         $spot = ParkingSpot::first();
         
@@ -115,7 +107,6 @@ class RegisterEntryIntegrationTest extends TestCase
 
         $spot->update(['status' => ParkingSpotStatus::DISPONIVEL]);
 
-        // Registrar entrada novamente
         $response = $this->postJson('/api/vehicles/entry', [
             'plate' => 'DEF5678',
             'gate_id' => 'entrada-2',
@@ -126,10 +117,8 @@ class RegisterEntryIntegrationTest extends TestCase
                 'success' => true,
             ]);
 
-        // Verificar que há 2 tickets para o mesmo veículo
         $this->assertEquals(2, Ticket::where('vehicle_id', $vehicle->id)->count());
 
-        // Verificar que apenas 1 está ativo
         $this->assertEquals(1, Ticket::where('vehicle_id', $vehicle->id)
             ->where('status', TicketStatus::ABERTO)
             ->count());
@@ -196,7 +185,6 @@ class RegisterEntryIntegrationTest extends TestCase
 
         $response->assertStatus(201);
 
-        // Job NÃO deve ser disparado
         Queue::assertNotPushed(FetchVehicleDetailsJob::class);
     }
 
@@ -211,7 +199,6 @@ class RegisterEntryIntegrationTest extends TestCase
 
         $response->assertStatus(201);
 
-        // Verificar que ticket foi criado
         $vehicle = Vehicle::where('plate', 'MNO7890')->first();
         $this->assertDatabaseHas('tickets', [
             'vehicle_id' => $vehicle->id,

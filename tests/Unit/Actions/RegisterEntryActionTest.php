@@ -47,20 +47,17 @@ class RegisterEntryActionTest extends TestCase
         $plate = 'ABC1234';
         $gateId = 'entrada-1';
 
-        // Mock: Veículo não existe
         $this->vehicleRepository
             ->expects($this->once())
             ->method('findByPlate')
             ->with($plate)
             ->willReturn(null);
 
-        // Mock: Estacionamento não está lotado
         $this->ticketRepository
             ->expects($this->once())
             ->method('countActiveTickets')
             ->willReturn(50);
 
-        // Mock: Criar novo veículo
         $vehicleDTO = new VehicleDTO(
             id: 1,
             plate: $plate,
@@ -78,7 +75,6 @@ class RegisterEntryActionTest extends TestCase
             ->method('firstOrCreate')
             ->willReturn($vehicleDTO);
 
-        // Mock: Encontrar vaga disponível
         $spotDTO = new ParkingSpotDTO(
             id: 1,
             code: 'A-01',
@@ -90,13 +86,11 @@ class RegisterEntryActionTest extends TestCase
             ->method('findAvailableSpot')
             ->willReturn($spotDTO);
 
-        // Mock: Atualizar status da vaga
         $this->spotRepository
             ->expects($this->once())
             ->method('updateStatus')
             ->with($spotDTO->id, ParkingSpotStatus::OCUPADO);
 
-        // Mock: Criar ticket
         $ticketDTO = new TicketDTO(
             id: 'test-uuid',
             vehicleId: 1,
@@ -114,7 +108,6 @@ class RegisterEntryActionTest extends TestCase
             ->method('create')
             ->willReturn($ticketDTO);
 
-        // Mock: Retornar ticket com relações
         $ticketWithRelations = new TicketWithRelationsDTO(
             ticket: $ticketDTO,
             vehicle: $vehicleDTO,
@@ -127,16 +120,13 @@ class RegisterEntryActionTest extends TestCase
             ->with($ticketDTO->id)
             ->willReturn($ticketWithRelations);
 
-        // Executar
         $result = $this->action->execute($plate, $gateId);
 
-        // Assertions
         $this->assertInstanceOf(TicketWithRelationsDTO::class, $result);
         $this->assertEquals($plate, $result->vehicle->plate);
         $this->assertEquals(TicketStatus::ABERTO, $result->ticket->status);
         $this->assertEquals($gateId, $result->ticket->gateId);
 
-        // Verificar se o job foi disparado
         Queue::assertPushed(FetchVehicleDetailsJob::class, function ($job) use ($vehicleDTO) {
             return $job->vehicleId === $vehicleDTO->id;
         });
@@ -150,7 +140,6 @@ class RegisterEntryActionTest extends TestCase
         $plate = 'XYZ9999';
         $gateId = 'entrada-2';
 
-        // Mock: Veículo existe sem modelo
         $existingVehicle = new VehicleDTO(
             id: 5,
             plate: $plate,
@@ -169,26 +158,22 @@ class RegisterEntryActionTest extends TestCase
             ->with($plate)
             ->willReturn($existingVehicle);
 
-        // Mock: Veículo não tem ticket ativo
         $this->ticketRepository
             ->expects($this->once())
             ->method('findActiveTicketForVehicle')
             ->with($existingVehicle->id)
             ->willReturn(null);
 
-        // Mock: Estacionamento não está lotado
         $this->ticketRepository
             ->expects($this->once())
             ->method('countActiveTickets')
             ->willReturn(30);
 
-        // Mock: firstOrCreate retorna veículo existente
         $this->vehicleRepository
             ->expects($this->once())
             ->method('firstOrCreate')
             ->willReturn($existingVehicle);
 
-        // Mock: Encontrar vaga
         $spotDTO = new ParkingSpotDTO(
             id: 2,
             code: 'A-02',
@@ -205,7 +190,6 @@ class RegisterEntryActionTest extends TestCase
             ->method('updateStatus')
             ->with($spotDTO->id, ParkingSpotStatus::OCUPADO);
 
-        // Mock: Criar ticket
         $ticketDTO = new TicketDTO(
             id: 'test-uuid-2',
             vehicleId: $existingVehicle->id,
@@ -234,13 +218,10 @@ class RegisterEntryActionTest extends TestCase
             ->method('findByIdWithRelations')
             ->willReturn($ticketWithRelations);
 
-        // Executar
         $result = $this->action->execute($plate, $gateId);
 
-        // Assertions
         $this->assertEquals($existingVehicle->id, $result->vehicle->id);
 
-        // Job deve ser disparado pois model é null
         Queue::assertPushed(FetchVehicleDetailsJob::class);
     }
 
@@ -252,7 +233,6 @@ class RegisterEntryActionTest extends TestCase
         $plate = 'DEF5678';
         $gateId = 'entrada-1';
 
-        // Mock: Veículo existe com dados completos
         $existingVehicle = new VehicleDTO(
             id: 10,
             plate: $plate,
@@ -328,10 +308,8 @@ class RegisterEntryActionTest extends TestCase
             ->method('findByIdWithRelations')
             ->willReturn($ticketWithRelations);
 
-        // Executar
         $result = $this->action->execute($plate, $gateId);
 
-        // Job NÃO deve ser disparado pois veículo tem dados completos
         Queue::assertNotPushed(FetchVehicleDetailsJob::class);
     }
 
@@ -341,7 +319,6 @@ class RegisterEntryActionTest extends TestCase
         $plate = 'GHI9012';
         $gateId = 'entrada-1';
 
-        // Mock: Veículo existe
         $existingVehicle = new VehicleDTO(
             id: 15,
             plate: $plate,
@@ -359,7 +336,6 @@ class RegisterEntryActionTest extends TestCase
             ->method('findByPlate')
             ->willReturn($existingVehicle);
 
-        // Mock: Veículo tem ticket ativo
         $activeTicket = new TicketDTO(
             id: 'active-ticket-uuid',
             vehicleId: $existingVehicle->id,
@@ -378,7 +354,6 @@ class RegisterEntryActionTest extends TestCase
             ->with($existingVehicle->id)
             ->willReturn($activeTicket);
 
-        // Expectations: Não deve chamar outros métodos
         $this->ticketRepository
             ->expects($this->never())
             ->method('countActiveTickets');
@@ -396,19 +371,16 @@ class RegisterEntryActionTest extends TestCase
         $plate = 'JKL3456';
         $gateId = 'entrada-1';
 
-        // Mock: Veículo não existe
         $this->vehicleRepository
             ->expects($this->once())
             ->method('findByPlate')
             ->willReturn(null);
 
-        // Mock: Estacionamento está lotado
         $this->ticketRepository
             ->expects($this->once())
             ->method('countActiveTickets')
             ->willReturn(100); // MAX_CAPACITY = 100
 
-        // Expectations: Não deve criar veículo
         $this->vehicleRepository
             ->expects($this->never())
             ->method('firstOrCreate');
@@ -426,19 +398,16 @@ class RegisterEntryActionTest extends TestCase
         $plate = 'MNO7890';
         $gateId = 'entrada-1';
 
-        // Mock: Veículo não existe
         $this->vehicleRepository
             ->expects($this->once())
             ->method('findByPlate')
             ->willReturn(null);
 
-        // Mock: Estacionamento não está lotado
         $this->ticketRepository
             ->expects($this->once())
             ->method('countActiveTickets')
             ->willReturn(95);
 
-        // Mock: Criar veículo
         $vehicleDTO = new VehicleDTO(
             id: 20,
             plate: $plate,
@@ -456,13 +425,11 @@ class RegisterEntryActionTest extends TestCase
             ->method('firstOrCreate')
             ->willReturn($vehicleDTO);
 
-        // Mock: Nenhuma vaga disponível
         $this->spotRepository
             ->expects($this->once())
             ->method('findAvailableSpot')
             ->willReturn(null);
 
-        // Expectations: Não deve atualizar vaga nem criar ticket
         $this->spotRepository
             ->expects($this->never())
             ->method('updateStatus');
