@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use App\Domain\Parking\Actions\RegisterEntryAction;
+use App\Domain\Parking\Actions\RegisterRandomVehicleAction;
 use App\Domain\Parking\Models\Ticket;
 use App\Domain\Parking\Models\ParkingSpot;
 
@@ -62,6 +63,39 @@ Route::post('/vehicles/entry', function (Request $request, RegisterEntryAction $
             'message' => 'Dados inválidos',
             'errors' => $e->errors(),
         ], 422);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+        ], $e->getCode() ?: 500);
+    }
+});
+
+// Registrar veículo com placa aleatória
+Route::get('/vehicles/entry/random', function (RegisterRandomVehicleAction $action) {
+    try {
+        $result = $action->execute();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Veículo registrado com sucesso',
+            'data' => [
+                'ticket' => [
+                    'id' => $result->ticket->id,
+                    'entry_at' => $result->ticket->entryAt->format('Y-m-d H:i:s'),
+                    'status' => $result->ticket->status,
+                ],
+                'vehicle' => [
+                    'plate' => $result->vehicle->plate,
+                    'type' => $result->vehicle->type,
+                ],
+                'spot' => [
+                    'code' => $result->spot->code,
+                    'status' => $result->spot->status,
+                ],
+            ],
+        ], 201);
 
     } catch (\Exception $e) {
         return response()->json([
