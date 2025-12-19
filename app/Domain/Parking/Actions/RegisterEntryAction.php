@@ -27,7 +27,10 @@ class RegisterEntryAction
 
     public function execute(string $plate, string $gateId): TicketWithRelationsDTO
     {
-        return DB::transaction(function () use ($plate, $gateId) {
+        $shouldFetchVehicleDetails = false;
+        $vehicleId = null;
+
+        $result = DB::transaction(function () use ($plate, $gateId, &$shouldFetchVehicleDetails, &$vehicleId) {
             
             $vehicle = $this->vehicleRepository->findByPlate($plate);
 
@@ -49,7 +52,8 @@ class RegisterEntryAction
             $vehicle = $this->vehicleRepository->firstOrCreate($vehicleDTO);
 
             if ($vehicle->wasRecentlyCreated || is_null($vehicle->model)) {
-                FetchVehicleDetailsJob::dispatch($vehicle->id);
+                $shouldFetchVehicleDetails = true;
+                $vehicleId = $vehicle->id;
             }
 
             $parkingSpot = $this->spotRepository->findAvailableSpot();
@@ -72,5 +76,11 @@ class RegisterEntryAction
 
             return $this->ticketRepository->findByIdWithRelations($ticket->id);
         });
+
+        if ($shouldFetchVehicleDetails && $vehicleId) {
+            FetchVehicleDetailsJob::dispatch($vehicleId);
+        }
+
+        return $result;
     }
 }
