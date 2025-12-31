@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('parking_spots', function (Blueprint $table) {
             $table->id();
-            $table->char('code', 4);
+            $table->char('code', 10);
             $table->enum('status', ['Disponível', 'Ocupado', 'Manutenção'])->default('Disponível');
             $table->string('type')->default('Padrão');
             $table->timestamps();

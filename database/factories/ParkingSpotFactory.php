@@ -24,6 +24,11 @@ class ParkingSpotFactory extends Factory
     protected static int $counter = 0;
 
     /**
+     * Número de vagas por setor (padrão: 1000)
+     */
+    protected static int $spotsPerSector = 1000;
+
+    /**
      * Define o estado padrão do model.
      *
      * @return array<string, mixed>
@@ -35,21 +40,48 @@ class ParkingSpotFactory extends Factory
         return [
             'code' => $code,
             'status' => ParkingSpotStatus::DISPONIVEL,
-            'type' => 'Padrão',
         ];
     }
 
     /**
-     * Gera o código da vaga no formato A-01 até J-10.
+     * Gera o código da vaga no formato A-1, A-2, ..., Z-999, AA-1, etc.
+     * Suporta quantidade ilimitada de vagas.
      */
     protected function generateCode(): string
     {
-        $letter = chr(65 + floor(self::$counter / 10));
-        $number = str_pad((self::$counter % 10) + 1, 2, '0', STR_PAD_LEFT);
+        $sectorIndex = floor(self::$counter / self::$spotsPerSector);
+        $spotNumber = (self::$counter % self::$spotsPerSector) + 1;
+        
+        // Gera o código do setor (A, B, C, ..., Z, AA, AB, ...)
+        $sectorCode = $this->getSectorCode($sectorIndex);
         
         self::$counter++;
         
-        return "{$letter}-{$number}";
+        return "{$sectorCode}-{$spotNumber}";
+    }
+
+    /**
+     * Converte um índice numérico em código de setor (A, B, ..., Z, AA, AB, ...)
+     */
+    protected function getSectorCode(int $index): string
+    {
+        $code = '';
+        
+        do {
+            $code = chr(65 + ($index % 26)) . $code;
+            $index = floor($index / 26) - 1;
+        } while ($index >= 0);
+        
+        return $code;
+    }
+
+    /**
+     * Define quantas vagas cada setor terá.
+     */
+    public function spotsPerSector(int $spots): static
+    {
+        self::$spotsPerSector = $spots;
+        return $this;
     }
 
     /**

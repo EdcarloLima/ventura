@@ -27,6 +27,13 @@ RUN pecl install redis \
 # Obter o Composer mais recente
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Copiar configuração customizada do PHP-FPM
+COPY ./docker/php-fpm/www.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Criar diretório de logs do PHP-FPM
+RUN mkdir -p /var/log/php-fpm && \
+    chown -R www-data:www-data /var/log/php-fpm
+
 # Criar usuário do sistema para rodar o Composer e Artisan
 RUN useradd -G www-data,root -u $uid -d /home/$user $user
 RUN mkdir -p /home/$user/.composer && \
