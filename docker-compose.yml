@@ -1,5 +1,5 @@
 services:
-  # 1. Aplicação (Laravel)
+  # 1. Aplicação (Laravel + PHP-FPM)
   app:
     build:
       context: .
@@ -13,6 +13,7 @@ services:
     working_dir: /var/www
     volumes:
       - ./:/var/www
+      - ./docker/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro
     networks:
       - parking-network
     depends_on:
@@ -21,11 +22,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'      # 50% de 1 vCPU (t3.micro tem 2 vCPUs)
-          memory: 256M     # ~25% da RAM (1GB total)
+          cpus: '1.0'      # 100% de 1 vCPU (para 50 processos PHP)
+          memory: 512M     # 50 processos × ~10MB = ~500MB
         reservations:
-          cpus: '0.25'     # Mínimo garantido
-          memory: 128M     # Mínimo garantido
+          cpus: '0.5'      # Mínimo garantido
+          memory: 256M     # Mínimo garantido
 
   # 2. Servidor Web (Nginx)
   nginx:
@@ -33,38 +34,37 @@ services:
     container_name: parking-nginx
     restart: unless-stopped
     ports:
-      - "8080:80" # Acessará via localhost:8080
+      - "8080:80" 
     volumes:
       - ./:/var/www
       - ./docker/nginx/conf.d:/etc/nginx/conf.d # Configuração customizada
     networks:
       - parking-network
     depends_on:
-      - app # Só sobe depois que o app subir
+      - app 
     deploy:
       resources:
         limits:
-          cpus: '0.25'     # Nginx é leve
-          memory: 64M      # ~6% da RAM
+          cpus: '0.5'      
+          memory: 128M     
         reservations:
-          cpus: '0.1'
-          memory: 32M
+          cpus: '0.25'
+          memory: 64M
 
   # SERVIÇO DE TÚNEL (NGROK)
   ngrok:
     image: ngrok/ngrok:latest
     container_name: parking-ngrok
     restart: unless-stopped
-    # O comando diz: "Crie um túnel HTTP apontando para o serviço 'nginx' na porta 80"
     command: "http --domain=${NGROK_DOMAIN} nginx:80"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     ports:
-      - "4040:4040" # Interface visual do Ngrok (para inspecionar requisições)
+      - "4040:4040" 
     networks:
       - parking-network
     depends_on:
-      - nginx # Só sobe se o servidor web estiver de pé
+      - nginx 
     deploy:
       resources:
         limits:
@@ -88,33 +88,34 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - ./docker/mysql/data:/var/lib/mysql # Persistência dos dados
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     networks:
       - parking-network
     deploy:
       resources:
         limits:
-          cpus: '0.5'      # MySQL precisa mais CPU
-          memory: 384M     # ~38% da RAM (maior consumidor)
+          cpus: '1.0'      
+          memory: 512M     
         reservations:
-          cpus: '0.25'
-          memory: 256M
+          cpus: '0.5'
+          memory: 384M
 
   # 4. Redis
   redis:
     image: redis:alpine
     container_name: parking-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes # Garante persistência básica
+    command: redis-server --appendonly yes --maxmemory 100mb --maxmemory-policy allkeys-lru
     volumes:
-      - ./docker/redis/data:/data # Persiste a fila mesmo se reiniciar
+      - ./docker/redis/data:/data 
     networks:
       - parking-network
     deploy:
       resources:
         limits:
           cpus: '0.25'
-          memory: 128M     # ~12% da RAM
+          memory: 128M     
         reservations:
           cpus: '0.1'
           memory: 64M
@@ -131,7 +132,6 @@ services:
     container_name: parking-queue
     restart: unless-stopped
     working_dir: /var/www
-    # Sobrescreve o comando padrão para rodar o worker
     command: php artisan queue:work --verbose --tries=3 --timeout=90
     volumes:
       - ./:/var/www
@@ -144,7 +144,7 @@ services:
       resources:
         limits:
           cpus: '0.25'
-          memory: 128M     # ~12% da RAM
+          memory: 128M     
         reservations:
           cpus: '0.1'
           memory: 64M
