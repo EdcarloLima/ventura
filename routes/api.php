@@ -75,7 +75,9 @@ Route::post('/vehicles/entry', function (Request $request, RegisterEntryAction $
 // Registrar veículo com placa aleatória
 Route::get('/vehicles/entry/random', function (RegisterRandomVehicleAction $action) {
     try {
-        $result = $action->execute();
+        // receber parâmetro da placa
+        $plate = null;
+        $result = $action->execute($plate);
 
         return response()->json([
             'success' => true,

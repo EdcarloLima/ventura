@@ -19,8 +19,8 @@ class ParkingSpotSeeder extends Seeder
         ParkingSpotFactory::resetCounter();
 
         // Cria 100 vagas sequencialmente (A-01 até J-10)
-        ParkingSpot::factory()->count(100)->create();
+        ParkingSpot::factory()->count(10000)->create();
 
-        $this->command->info('✅ 100 vagas de estacionamento criadas com sucesso!');
+        //$this->command->info('✅ 100 vagas de estacionamento criadas com sucesso!');
     }
 }

@@ -3,61 +3,60 @@
 namespace Database\Seeders;
 
 use App\Domain\Parking\Models\ParkingSpot;
-use App\Domain\Parking\Enums\ParkingSpotStatus;
+use Database\Factories\ParkingSpotFactory;
 use Illuminate\Database\Seeder;
 
 class ParkingSpotSeeder extends Seeder
 {
+    /**
+     * Quantidade total de vagas a criar (padrão: 10.000)
+     */
+    protected int $totalSpots = 10000;
+
+    /**
+     * Quantidade de vagas por setor (padrão: 1000)
+     * Exemplo: 10.000 vagas / 1000 por setor = 10 setores (A, B, C, ..., J)
+     */
+    protected int $spotsPerSector = 1000;
+
     public function run(): void
     {
+        $this->command->info("🚀 Criando {$this->totalSpots} vagas de estacionamento...");
+        $this->command->info("📊 Distribuição: {$this->spotsPerSector} vagas por setor");
+
         // Limpar vagas existentes
         ParkingSpot::query()->delete();
 
-        $spots = [];
+        // Resetar o contador da factory
+        ParkingSpotFactory::resetCounter();
+
+        // Criar vagas usando a factory
+        ParkingSpot::factory()
+            ->spotsPerSector($this->spotsPerSector)
+            ->count($this->totalSpots)
+            ->create();
+
+        $sectors = ceil($this->totalSpots / $this->spotsPerSector);
         
-        // Setor A - 25 vagas
-        for ($i = 1; $i <= 25; $i++) {
-            $spots[] = [
-                'code' => sprintf('A-%02d', $i),
-                'status' => ParkingSpotStatus::DISPONIVEL,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
+        $this->command->info("✅ {$this->totalSpots} vagas criadas com sucesso!");
+        $this->command->info("🏢 {$sectors} setores criados");
+    }
 
-        // Setor B - 25 vagas
-        for ($i = 1; $i <= 25; $i++) {
-            $spots[] = [
-                'code' => sprintf('B-%02d', $i),
-                'status' => ParkingSpotStatus::DISPONIVEL,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
+    /**
+     * Define a quantidade total de vagas a criar
+     */
+    public function setTotalSpots(int $spots): self
+    {
+        $this->totalSpots = $spots;
+        return $this;
+    }
 
-        // Setor C - 25 vagas
-        for ($i = 1; $i <= 25; $i++) {
-            $spots[] = [
-                'code' => sprintf('C-%02d', $i),
-                'status' => ParkingSpotStatus::DISPONIVEL,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        // Setor D - 25 vagas
-        for ($i = 1; $i <= 25; $i++) {
-            $spots[] = [
-                'code' => sprintf('D-%02d', $i),
-                'status' => ParkingSpotStatus::DISPONIVEL,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        // Inserir todas as vagas
-        ParkingSpot::insert($spots);
-
-        $this->command->info('✅ 100 vagas de estacionamento criadas com sucesso!');
+    /**
+     * Define quantas vagas cada setor terá
+     */
+    public function setSpotsPerSector(int $spots): self
+    {
+        $this->spotsPerSector = $spots;
+        return $this;
     }
 }
