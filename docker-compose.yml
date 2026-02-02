@@ -25,23 +25,45 @@ services:
           cpus: '1.0'      # 100% de 1 vCPU (para 50 processos PHP)
           memory: 512M     # 50 processos × ~10MB = ~500MB
         reservations:
-          cpus: '0.5'      # Mínimo garantido
-          memory: 256M     # Mínimo garantido
+          cpus: '0.5'      
+          memory: 256M     
+
 
   # 2. Servidor Web (Nginx)
-  nginx:
-    image: nginx:alpine
-    container_name: parking-nginx
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: parking-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:80" 
+  #   volumes:
+  #     - ./:/var/www
+  #     - ./docker/nginx/conf.d:/etc/nginx/conf.d 
+  #   networks:
+  #     - parking-network
+  #   depends_on:
+  #     - app 
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'      
+  #         memory: 128M     
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 64M
+  apache:
+    image: httpd:2.4-alpine
+    container_name: parking-apache
     restart: unless-stopped
     ports:
       - "8080:80" 
     volumes:
       - ./:/var/www
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d # Configuração customizada
+      - ./docker/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
     networks:
       - parking-network
     depends_on:
-      - app 
+      - app
     deploy:
       resources:
         limits:
@@ -56,7 +78,7 @@ services:
     image: ngrok/ngrok:latest
     container_name: parking-ngrok
     restart: unless-stopped
-    command: "http --domain=${NGROK_DOMAIN} nginx:80"
+    command: "http --domain=${NGROK_DOMAIN} apache:80"
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     ports:
@@ -64,7 +86,7 @@ services:
     networks:
       - parking-network
     depends_on:
-      - nginx 
+      - apache 
     deploy:
       resources:
         limits:
